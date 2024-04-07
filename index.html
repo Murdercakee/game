@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiplayer HTML Game</title>
+    <style>
+        canvas {
+            background-color: #f0f0f0;
+            display: block;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const ws = new WebSocket('ws://localhost:8080');
+
+        let playerId;
+
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            if (data.type === 'players') {
+                render(data.players);
+            }
+        };
+
+        function render(players) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (const id in players) {
+                if (id === playerId) {
+                    ctx.fillStyle = '#007bff';
+                } else {
+                    ctx.fillStyle = '#ff0000';
+                }
+                const player = players[id];
+                ctx.fillRect(player.x, player.y, 50, 50);
+            }
+        }
+
+        canvas.addEventListener('keydown', function(event) {
+            const key = event.key;
+            const position = { x: players[playerId].x, y: players[playerId].y };
+            if (key === 'ArrowUp' && position.y > 0) {
+                position.y -= 5;
+            } else if (key === 'ArrowDown' && position.y < canvas.height - 50) {
+                position.y += 5;
+            }
+            ws.send(JSON.stringify({ type: 'move', id: playerId, position: position }));
+        });
+
+        // Handle initial player join
+        ws.onopen = function() {
+            ws.send(JSON.stringify({ type: 'join' }));
+        };
+    </script>
+</body>
+</html>
